@@ -1,0 +1,175 @@
+openapi: 3.0.0
+info:
+  title: Zip Archiver
+  description: Система архивации удаленных публичных файлов
+  version: v1
+servers:
+  - url: http://localhost:8080/
+paths:
+  /api/v1/create-task:
+    post:
+      tags:
+        - ZIP-server API
+      summary: Создание задачи на создание архива
+      responses:
+        '201':
+          description: Успешное создание задачи
+          content:
+            application/json:
+              schema: 
+                "$ref": "#/components/schemas/CreateTaskResponse"
+        '503':
+          description: В данный момент сервер занят
+          content:
+            application/json:
+              schema: 
+                 "$ref": "#/components/schemas/ErrorResponse"
+  /api/v1/{taskUuid}/add-file-link:
+    patch:
+      tags:
+        - ZIP-server API
+      summary: Добавление ссылок в задачу по идентификатору
+      parameters:
+        - name: taskUuid
+          in: path
+          description: Идентификатор задачи
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/AddLinksRequest"
+      responses:
+        '203':
+          description: Добавление ссылок в обработку
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AddLinksResponse"
+        '403':
+          description: Добавление новых ссылок невозможно -- архив обрабатывается
+          content:
+            application/json:
+              schema: 
+                 "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: Задача не найдена
+          content:
+            application/json:
+              schema: 
+                 "$ref": "#/components/schemas/ErrorResponse"
+  /api/v1/{taskUuid}/status:
+    get:
+      tags:
+        - ZIP-server API
+      summary: Статус задачи по идентификатору
+      parameters:
+        - name: taskUuid
+          in: path
+          description: Идентификатор задачи
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Получение статуса задачи
+          content:
+            application/json:
+              schema: 
+                 "$ref": "#/components/schemas/TaskStatusResponse"
+        '404':
+          description: Задача не найдена
+          content:
+            application/json:
+              schema: 
+                 "$ref": "#/components/schemas/ErrorResponse"
+  /archives/{fileName}:
+    get:
+      tags:
+        - ZIP-server API
+      summary: Скачивание архива по имени
+      parameters:
+        - name: fileName
+          in: path
+          description: Имя архива
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успешная загрузка архива
+          content:
+            application/zip:
+              schema: 
+                type: string
+                format: binary
+        '404':
+          description: Архив не найден
+          content:
+            application/json:
+              schema: 
+                 "$ref": "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    CreateTaskResponse:
+      properties:
+        taskUuid:
+          type: string
+          format: UUID
+          description: Идентификатор задачи
+      type: object
+    AddLinksRequest:
+      properties:
+        links:
+          type: array
+          items:
+            type: string
+            format: URL
+          description: Список ссылок на файлы, размещенные удаленно в открытом доступе в интернете
+      type: object
+    AddLinksResponse:
+      properties:
+        addedLinks:
+          type: array
+          items:
+            type: string
+            format: URL
+          description: Список ссылок, добавленных в обработку
+        hasReachedLimit:
+          type: boolean
+          description: Флаг достижения лимита по количеству ссылок в задаче
+      type: object
+    TaskStatusResponse:
+      properties:
+        status:
+          type: string
+          enum:
+          - WAITING_LINKS
+          - PROCESSING
+          - FINISHED
+          description: текущий статус задачи
+        failedLinks:
+          type: array
+          items:
+            type: object
+            properties:
+              link:
+                type: string
+                format: URL
+              message:
+                type: string
+          description: Список ссылок, указывающих на не добавленные в архив файлы, и сообщений об ошибке для каждого из них
+        hasReachedLimit:
+          type: boolean
+          description: Флаг достижения лимита по количеству ссылок в задаче
+      type: object
+    ErrorResponse:
+      properties:
+        message:
+          type: string
+          description: Сообщение об ошибке
+      type: object
