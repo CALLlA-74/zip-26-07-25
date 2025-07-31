@@ -3,7 +3,7 @@ package mocks
 import (
 	"errors"
 
-	"github.com/CALLlA-74/zip-service/domain"
+	"github.com/CALLlA-74/zip-26-07-25/domain"
 
 	"github.com/stretchr/testify/mock"
 )

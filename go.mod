@@ -1,4 +1,4 @@
-module zip-service
+module zip-26-07-25
 
 go 1.23.0
 

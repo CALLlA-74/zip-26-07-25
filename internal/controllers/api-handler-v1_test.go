@@ -7,11 +7,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"zip-service/config"
-	"zip-service/domain"
-	"zip-service/internal/controllers"
 
-	"github.com/CALLlA-74/zip-service/internal/controllers/mocks"
+	"github.com/CALLlA-74/zip-26-07-25/config"
+	"github.com/CALLlA-74/zip-26-07-25/domain"
+	"github.com/CALLlA-74/zip-26-07-25/internal/controllers"
+
+	"github.com/CALLlA-74/zip-26-07-25/internal/controllers/mocks"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
