@@ -24,7 +24,7 @@ paths:
             application/json:
               schema: 
                  "$ref": "#/components/schemas/ErrorResponse"
-  /api/v1/{taskUuid}/add-file-link:
+  /api/v1/{taskUuid}/add-file-links:
     patch:
       tags:
         - ZIP-server API
@@ -87,7 +87,7 @@ paths:
             application/json:
               schema: 
                  "$ref": "#/components/schemas/ErrorResponse"
-  /archives/{fileName}:
+  /archivers/{fileName}:
     get:
       tags:
         - ZIP-server API
@@ -163,9 +163,10 @@ components:
               message:
                 type: string
           description: Список ссылок, указывающих на не добавленные в архив файлы, и сообщений об ошибке для каждого из них
-        hasReachedLimit:
-          type: boolean
-          description: Флаг достижения лимита по количеству ссылок в задаче
+        archiveLink:
+          type: string
+          format: URL
+          description: ссылка на архив
       type: object
     ErrorResponse:
       properties:
