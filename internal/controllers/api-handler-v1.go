@@ -38,7 +38,7 @@ func (ah ApiHandlerV1) CreateTask(context *gin.Context) {
 func (ah ApiHandlerV1) AddFileLinks(context *gin.Context) {
 	taskUuid := context.Param("taskUuid")
 
-	var addLinksReq *domain.AddLinksRequest
+	addLinksReq := new(domain.AddLinksRequest)
 	if e := context.BindJSON(addLinksReq); e != nil {
 		context.JSON(errToStatusCode(e), &domain.ErrorResponse{Message: e.Error()})
 		return
