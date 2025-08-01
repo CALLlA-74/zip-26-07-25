@@ -33,7 +33,7 @@ func TestCreateTask(t *testing.T) {
 		assert.NoError(t, err)
 		ctx.Request = req
 
-		handler := controllers.ApiHandlerV1{
+		handler := &controllers.ApiHandlerV1{
 			Ias: mockUCase,
 		}
 		handler.CreateTask(ctx)
@@ -55,7 +55,7 @@ func TestCreateTask(t *testing.T) {
 
 	e := errors.New("Internal Server error")
 	rec = testPipline(nil, e)
-	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Equal(t, true, strings.Contains(rec.Body.String(), e.Error()))
 }
 

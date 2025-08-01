@@ -33,9 +33,9 @@ func (_m *ArchiverUC) CreateTask() (*domain.CreateTaskResponse, error) {
 		p0 = rf
 	}
 
-	if rf, ok := ret.Get(0).(func() error); ok {
+	if rf, ok := ret.Get(1).(func() error); ok {
 		p1 = rf()
-	} else if rf, ok := ret.Get(0).(error); ok {
+	} else if rf, ok := ret.Get(1).(error); ok {
 		p1 = rf
 	}
 
