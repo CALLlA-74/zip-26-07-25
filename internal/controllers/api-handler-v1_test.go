@@ -2,6 +2,7 @@ package controllers_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -14,8 +15,10 @@ import (
 
 	"github.com/CALLlA-74/zip-26-07-25/internal/controllers/mocks"
 	"github.com/gin-gonic/gin"
+	faker "github.com/go-faker/faker/v4"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestCreateTask(t *testing.T) {
@@ -60,7 +63,53 @@ func TestCreateTask(t *testing.T) {
 }
 
 func TestAddFileLinks(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 
+	testPipline := func(tUid string, mReq *domain.AddLinksRequest,
+		mr *domain.AddLinksResponse, e error) *httptest.ResponseRecorder {
+
+		mockUCase := new(mocks.ArchiverUC)
+		mockUCase.On("AddLinks", tUid, mock.AnythingOfType("*domain.AddLinksRequest")).Return(mr, e)
+
+		rec := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(rec)
+
+		j, e := json.Marshal(mReq)
+		assert.NoError(t, e)
+
+		req, err := http.NewRequestWithContext(context.TODO(), http.MethodPatch, config.ApiV1GroupName+"/:taskUuid/add-file-links",
+			strings.NewReader(string(j)))
+
+		req.SetPathValue("taskUuid", tUid)
+		ctx.Request = req
+
+		assert.NoError(t, err)
+
+		handler := &controllers.ApiHandlerV1{
+			Ias: mockUCase,
+		}
+		handler.AddFileLinks(ctx)
+
+		mockUCase.AssertExpectations(t)
+		return rec
+	}
+
+	mReq := new(domain.AddLinksRequest)
+	assert.NoError(t, faker.FakeData(mReq))
+	sl := make([]string, 2)
+	copy(sl, mReq.Links[:2])
+	mResp := &domain.AddLinksResponse{AddedLinks: sl, HasReachedLimit: false}
+	tUid := uuid.NewString()
+	rec := testPipline(tUid, mReq, mResp, nil)
+	assert.Equal(t, http.StatusAccepted, rec.Code)
+
+	rec = testPipline(tUid, mReq, nil, domain.ErrAddingImpossible)
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrAddingImpossible.Error()))
+
+	rec = testPipline(tUid, mReq, nil, domain.ErrTaskNotFound)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrTaskNotFound.Error()))
 }
 
 func TestGetStatus(t *testing.T) {

@@ -43,7 +43,7 @@ paths:
             schema:
               "$ref": "#/components/schemas/AddLinksRequest"
       responses:
-        '203':
+        '202':
           description: Добавление ссылок в обработку
           content:
             application/json:
