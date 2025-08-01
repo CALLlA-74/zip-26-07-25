@@ -46,17 +46,17 @@ func TestCreateTask(t *testing.T) {
 		TaskUuid: uuid.NewString(),
 	}
 	rec := testPipline(mockTask, nil)
-	assert.Equal(t, rec.Code, http.StatusCreated)
-	assert.Equal(t, strings.Contains(rec.Body.String(), mockTask.TaskUuid), true)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+	assert.Equal(t, true, strings.Contains(rec.Body.String(), mockTask.TaskUuid))
 
 	rec = testPipline(nil, domain.ErrBusyServer)
-	assert.Equal(t, rec.Code, http.StatusServiceUnavailable)
-	assert.Equal(t, strings.Contains(rec.Body.String(), domain.ErrBusyServer.Error()), true)
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+	assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrBusyServer.Error()))
 
 	e := errors.New("Internal Server error")
 	rec = testPipline(nil, e)
-	assert.Equal(t, rec.Code, http.StatusServiceUnavailable)
-	assert.Equal(t, strings.Contains(rec.Body.String(), e.Error()), true)
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+	assert.Equal(t, true, strings.Contains(rec.Body.String(), e.Error()))
 }
 
 func TestAddFileLinks(t *testing.T) {

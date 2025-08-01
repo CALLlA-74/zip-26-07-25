@@ -1,8 +1,7 @@
 package controllers
 
 import (
-	"zip-service/config"
-
+	"github.com/CALLlA-74/zip-26-07-25/config"
 	"github.com/gin-gonic/gin"
 )
 

@@ -19,11 +19,27 @@ func (_m *ArchiverUC) CreateTask() (*domain.CreateTaskResponse, error) {
 		panic("No return value specified for CreateTask")
 	}
 
+	var (
+		p0 *domain.CreateTaskResponse
+		p1 error
+	)
 	if rf, ok := ret.Get(0).(func() (*domain.CreateTaskResponse, error)); ok {
 		return rf()
 	}
 
-	return nil, errors.New("Cast error")
+	if rf, ok := ret.Get(0).(func() *domain.CreateTaskResponse); ok {
+		p0 = rf()
+	} else if rf, ok := ret.Get(0).(*domain.CreateTaskResponse); ok {
+		p0 = rf
+	}
+
+	if rf, ok := ret.Get(0).(func() error); ok {
+		p1 = rf()
+	} else if rf, ok := ret.Get(0).(error); ok {
+		p1 = rf
+	}
+
+	return p0, p1
 }
 
 func (_m *ArchiverUC) AddLinks(taskUid string, addLinksReq *domain.AddLinksRequest) (*domain.AddLinksResponse, error) {

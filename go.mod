@@ -1,4 +1,4 @@
-module zip-26-07-25
+module github.com/CALLlA-74/zip-26-07-25
 
 go 1.23.0
 
