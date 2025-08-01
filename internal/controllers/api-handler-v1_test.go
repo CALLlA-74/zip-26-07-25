@@ -18,7 +18,6 @@ import (
 	faker "github.com/go-faker/faker/v4"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestCreateTask(t *testing.T) {
@@ -69,7 +68,7 @@ func TestAddFileLinks(t *testing.T) {
 		mr *domain.AddLinksResponse, e error) *httptest.ResponseRecorder {
 
 		mockUCase := new(mocks.ArchiverUC)
-		mockUCase.On("AddLinks", tUid, mock.AnythingOfType("*domain.AddLinksRequest")).Return(mr, e)
+		mockUCase.On("AddLinks", tUid, mReq).Return(mr, e)
 
 		rec := httptest.NewRecorder()
 		ctx, _ := gin.CreateTestContext(rec)
