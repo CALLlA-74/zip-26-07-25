@@ -5,19 +5,20 @@ import (
 
 	"github.com/CALLlA-74/zip-26-07-25/domain"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
-type iArchiverService interface {
+type iArchiverUsecase interface {
 	CreateTask() (*domain.CreateTaskResponse, error)
 	AddLinks(taskUid string, addLinksReq *domain.AddLinksRequest) (*domain.AddLinksResponse, error)
 	GetStatus(taskUid string) (*domain.TaskStatusResponse, error)
 }
 
 type ApiHandlerV1 struct {
-	Ias iArchiverService
+	Ias iArchiverUsecase
 }
 
-func NewArchiverHandler(ias iArchiverService, g gin.IRouter) *ApiHandlerV1 {
+func NewArchiverHandler(ias iArchiverUsecase, g gin.IRouter) *ApiHandlerV1 {
 	g.POST("/create-task")
 	g.PATCH("/:taskUuid/add-file-links")
 	g.GET("/:taskUuid/status")
@@ -40,7 +41,8 @@ func (ah ApiHandlerV1) AddFileLinks(context *gin.Context) {
 
 	addLinksReq := new(domain.AddLinksRequest)
 	if e := context.BindJSON(addLinksReq); e != nil {
-		context.JSON(errToStatusCode(e), &domain.ErrorResponse{Message: e.Error()})
+		logrus.Error(e)
+		context.JSON(http.StatusBadRequest, &domain.ErrorResponse{Message: e.Error()})
 		return
 	}
 
@@ -67,6 +69,7 @@ func errToStatusCode(e error) int {
 		return http.StatusOK
 	}
 
+	logrus.Error(e)
 	switch e {
 	case domain.ErrBusyServer:
 		return http.StatusServiceUnavailable

@@ -14,9 +14,14 @@ type AddLinksResponse struct {
 }
 
 type TaskStatusResponse struct {
-	Status      TStatuses `json:"status" validate:"required"`
-	FailedLinks []string  `json:"failedLinks" validate:"required"`
-	ArchiveLink string    `json:"archiveLink"`
+	Status      TStatuses     `json:"status" validate:"required"`
+	FailedLinks []*FailedLink `json:"failedLinks" validate:"required"`
+	ArchiveLink string        `json:"archiveLink"`
+}
+
+type FailedLink struct {
+	Link    string `json:"link" validate:"required"`
+	Message string `json:"message" validate:"required"`
 }
 
 type ErrorResponse struct {

@@ -76,11 +76,11 @@ func TestAddFileLinks(t *testing.T) {
 		j, e := json.Marshal(mReq)
 		assert.NoError(t, e)
 
-		req, err := http.NewRequestWithContext(context.TODO(), http.MethodPatch, config.ApiV1GroupName+"/:taskUuid/add-file-links",
-			strings.NewReader(string(j)))
+		req, err := http.NewRequestWithContext(context.TODO(), http.MethodPatch, config.ApiV1GroupName+"/"+tUid+
+			"/add-file-links", strings.NewReader(string(j)))
 
-		req.SetPathValue("taskUuid", tUid)
 		ctx.Request = req
+		ctx.AddParam("taskUuid", tUid)
 
 		assert.NoError(t, err)
 
@@ -95,6 +95,7 @@ func TestAddFileLinks(t *testing.T) {
 
 	mReq := new(domain.AddLinksRequest)
 	assert.NoError(t, faker.FakeData(mReq))
+	mReq.Links = mReq.Links[:3]
 	sl := make([]string, 2)
 	copy(sl, mReq.Links[:2])
 	mResp := &domain.AddLinksResponse{AddedLinks: sl, HasReachedLimit: false}
@@ -112,5 +113,39 @@ func TestAddFileLinks(t *testing.T) {
 }
 
 func TestGetStatus(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 
+	testPipline := func(tUid string, mr *domain.TaskStatusResponse, e error) *httptest.ResponseRecorder {
+		mockUCase := new(mocks.ArchiverUC)
+		mockUCase.On("GetStatus", tUid).Return(mr, e)
+
+		rec := httptest.NewRecorder()
+		ctx, _ := gin.CreateTestContext(rec)
+
+		req, err := http.NewRequestWithContext(context.TODO(), http.MethodPatch, config.ApiV1GroupName+"/"+tUid+
+			"/add-file-links", strings.NewReader(""))
+
+		ctx.Request = req
+		ctx.AddParam("taskUuid", tUid)
+
+		assert.NoError(t, err)
+
+		handler := &controllers.ApiHandlerV1{
+			Ias: mockUCase,
+		}
+		handler.GetStatus(ctx)
+
+		mockUCase.AssertExpectations(t)
+		return rec
+	}
+
+	mResp := new(domain.TaskStatusResponse)
+	assert.NoError(t, faker.FakeData(mResp))
+	tUid := uuid.NewString()
+	rec := testPipline(tUid, mResp, nil)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	rec = testPipline(tUid, nil, domain.ErrTaskNotFound)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrTaskNotFound.Error()))
 }

@@ -24,6 +24,12 @@ paths:
             application/json:
               schema: 
                  "$ref": "#/components/schemas/ErrorResponse"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: 
+                 "$ref": "#/components/schemas/ErrorResponse"
   /api/v1/{taskUuid}/add-file-links:
     patch:
       tags:
@@ -61,6 +67,12 @@ paths:
             application/json:
               schema: 
                  "$ref": "#/components/schemas/ErrorResponse"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: 
+                 "$ref": "#/components/schemas/ErrorResponse"
   /api/v1/{taskUuid}/status:
     get:
       tags:
@@ -87,6 +99,12 @@ paths:
             application/json:
               schema: 
                  "$ref": "#/components/schemas/ErrorResponse"
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: 
+                 "$ref": "#/components/schemas/ErrorResponse"
   /archivers/{fileName}:
     get:
       tags:
@@ -109,6 +127,12 @@ paths:
                 format: binary
         '404':
           description: Архив не найден
+          content:
+            application/json:
+              schema: 
+                 "$ref": "#/components/schemas/ErrorResponse"
+        '500':
+          description: Внутренняя ошибка сервера
           content:
             application/json:
               schema: 

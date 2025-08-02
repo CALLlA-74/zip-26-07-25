@@ -10,7 +10,7 @@ type Router struct {
 	apiV1Handler *ApiHandlerV1
 }
 
-func NewRouter(ias iArchiverService) *Router {
+func NewRouter(ias iArchiverUsecase) *Router {
 	router := gin.Default()
 	r := &Router{
 		router:       router,
