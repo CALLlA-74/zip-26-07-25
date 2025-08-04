@@ -5,7 +5,7 @@ const (
 	LoadArchGroupName = "/archivers"
 	HostPort          = 8080
 
-	DownloadPath = "./download"
+	DownloadPath = "./download/"
 
 	TASK_LIMIT  = 3
 	LINKS_LIMIT = 3

@@ -2,10 +2,10 @@ package domain
 
 import (
 	"archive/zip"
-	"bytes"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -36,6 +36,7 @@ const (
 )
 
 type File struct {
+	FileUid      string
 	TaskUuid     string
 	Link         string
 	Path         string
@@ -48,16 +49,28 @@ func DownloadFile(url, path string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() {
+		if e := out.Close(); e != nil {
+			logrus.Errorf("[Downloading] Error close [out] file \"%s\" error: %s", path, e.Error())
+		}
+	}()
 
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if e := resp.Body.Close(); e != nil {
+			logrus.Errorf("[Downloading] Error close [resp.body] \"%s\" error: %s", url, e.Error())
+		}
+	}()
 
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
+	logrus.Infof("Download file status: %s", resp.Status)
+	if resp.StatusCode >= http.StatusBadRequest {
+		return ErrLoadFile
+	}
+
+	if _, err = io.Copy(out, resp.Body); err != nil {
 		return err
 	}
 
@@ -65,49 +78,61 @@ func DownloadFile(url, path string) error {
 }
 
 func ValidateFile(path string) FTypes {
+	logrus.Infof("[Validating] Try to validate file [%s]", path)
 	f, e := os.Open(path)
 	if e != nil {
-		logrus.Errorf("Open file \"%s\" error: %s", path, e)
+		logrus.Errorf("[Validating] Open file \"%s\" error: %s", path, e)
 		return UNKNOWN_TYPE
 	}
 	defer func() {
 		if e := f.Close(); e != nil {
-			logrus.Errorf("Close file \"%s\" error: %s", path, e)
+			logrus.Errorf("[Validating] Close file \"%s\" error: %s", path, e)
 		}
 	}()
 
 	buf := make([]byte, 512)
 	if _, e := f.Read(buf); e != nil {
-		logrus.Errorf("Read file \"%s\" error: %s", path, e)
+		logrus.Errorf("[Validating] Read file \"%s\" error: %s", path, e)
 		return UNKNOWN_TYPE
 	}
 
 	t := http.DetectContentType(buf)
 	switch FTypes(t) {
-	case "image/jpeg", "application/pdf":
-		return FTypes(t)
+	case "image/jpeg":
+		return JPEG
+	case "application/pdf":
+		return PDF
 	default:
 		return UNKNOWN_TYPE
 	}
 }
 
 func CopyFile(from, to string) error {
+	logrus.Infof("[Coping] Try to copy from [%s] to [%s]", from, to)
 	in, e1 := os.OpenFile(from, os.O_RDONLY, 0)
 	if e1 != nil {
-		logrus.Errorf("Open file [from] \"%s\" error: %s", from, e1)
+		logrus.Errorf("[Coping] Open file [from] \"%s\" error: %s", from, e1)
 		return e1
 	}
-	defer in.Close()
+	defer func() {
+		if e := in.Close(); e != nil {
+			logrus.Errorf("[Coping] Close file [from] \"%s\" error: %s", from, e1)
+		}
+	}()
 
-	out, e2 := os.OpenFile(from, os.O_WRONLY, 0)
+	out, e2 := os.OpenFile(to, os.O_WRONLY|os.O_CREATE, 0)
 	if e2 != nil {
-		logrus.Errorf("Open file [to] \"%s\" error: %s", to, e2)
+		logrus.Errorf("[Coping] Open file [to] \"%s\" error: %s", to, e2)
 		return e2
 	}
-	defer out.Close()
+	defer func() {
+		if e := out.Close(); e != nil {
+			logrus.Errorf("[Coping] Close file [to] \"%s\" error: %s", to, e2)
+		}
+	}()
 
 	if _, e := io.Copy(out, in); e != nil {
-		logrus.Errorf("Copy file \"%s\" error: %s", to, e)
+		logrus.Errorf("[Coping] Copy file \"%s\" error: %s", to, e)
 		return e
 	}
 
@@ -115,25 +140,41 @@ func CopyFile(from, to string) error {
 }
 
 func PackToArchiver(name string, files []*File) error {
-	w := zip.NewWriter(new(bytes.Buffer))
-	defer w.Close()
+	archFile, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE, 0)
+	if err != nil {
+		logrus.Errorf("[Packing] Open archiver file \"%s\" error: %s", name, err)
+		return err
+	}
+	defer func() {
+		if e := archFile.Close(); e != nil {
+			logrus.Errorf("[Packing] Close archiver file \"%s\" error: %s", name, err)
+		}
+	}()
+
+	w := zip.NewWriter(archFile)
+	defer func() {
+		if e := w.Close(); e != nil {
+			logrus.Errorf("[Packing] Close zipWriter error: %s", e)
+		}
+	}()
 
 	for _, file := range files {
 		fBytes, err := os.ReadFile(file.Path)
 		if err != nil {
-			logrus.Errorf("Read file \"%s\" error: %s", file.Path, err)
+			logrus.Errorf("[Packing] Read file \"%s\" error: %s", file.Path, err)
 			continue
 		}
+		splt := strings.Split(file.Path, "/")
 
-		f, err := w.Create(file.Path)
+		f, err := w.Create(splt[len(splt)-1])
 		if err != nil {
-			logrus.Errorf("Create file \"%s\" in zip error: %s", file.Path, err)
+			logrus.Errorf("[Packing] Create file \"%s\" in zip error: %s", file.Path, err)
 			continue
 		}
 
 		_, e := f.Write(fBytes)
 		if e != nil {
-			logrus.Errorf("Write file \"%s\" to zip error: %s", file.Path, e)
+			logrus.Errorf("[Packing] Write file \"%s\" to zip error: %s", file.Path, e)
 		}
 	}
 

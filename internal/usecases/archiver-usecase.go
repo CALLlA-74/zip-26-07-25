@@ -14,7 +14,7 @@ import (
 )
 
 type iTaskRepo interface {
-	CreateTask() (*domain.Task, error)
+	CreateTask(*domain.Task) error
 	GetByUid(uid string) (*domain.Task, error)
 	Update(updTask *domain.Task) error
 }
@@ -43,7 +43,15 @@ func (auc *AchiverUC) CreateTask() (*domain.CreateTaskResponse, error) {
 		return nil, domain.ErrBusyServer
 	}
 
-	task, err := auc.itr.CreateTask()
+	task := &domain.Task{
+		TaskStatus:  domain.WAITING_LINKS,
+		NumOfLinks:  0,
+		ArchiveName: "",
+		ArchiveLink: "",
+		Version:     0,
+	}
+
+	err := auc.itr.CreateTask(task)
 	if err != nil {
 		auc.taskSem.Release(1)
 		return nil, err
@@ -58,7 +66,9 @@ func (auc *AchiverUC) AddLinks(taskUid string, addLinksReq *domain.AddLinksReque
 		return nil, err
 	}
 
-	auc.loadFiles(taskUid, resp.AddedLinks)
+	if resp.HasReachedLimit {
+		auc.loadFiles(taskUid, resp.AddedLinks)
+	}
 
 	return resp, nil
 }
@@ -81,6 +91,7 @@ func (auc *AchiverUC) tryToAddLinks(taskUid string, addLinksReq *domain.AddLinks
 
 		task.NumOfLinks = min(config.LINKS_LIMIT, task.NumOfLinks+int64(len(addLinksReq.Links)))
 		task.Version++
+		task.Uuid = taskUid
 
 		if task.NumOfLinks == config.LINKS_LIMIT {
 			task.TaskStatus = domain.PROCESSING
@@ -90,14 +101,14 @@ func (auc *AchiverUC) tryToAddLinks(taskUid string, addLinksReq *domain.AddLinks
 		if err := auc.itr.Update(task); err != nil {
 			if err != domain.ErrVersionConflict {
 				return nil, err
-			} else {
-				isOk = true
 			}
+		} else {
+			isOk = true
 		}
 	}
 
 	return &domain.AddLinksResponse{
-		AddedLinks:      addLinksReq.Links[:delta],
+		AddedLinks:      addLinksReq.Links[:min(delta, int64(len(addLinksReq.Links)))],
 		HasReachedLimit: hasReachedLimit,
 	}, nil
 }
@@ -126,6 +137,7 @@ func (auc *AchiverUC) loadFiles(taskUid string, links []string) {
 		}
 
 		fType := domain.ValidateFile(f.Path)
+		logrus.Infof("File by link [%s] has type: %s", f.Link, fType)
 		if fType == domain.UNKNOWN_TYPE {
 			os.Remove(f.Path)
 			logrus.Infof("File \"%s\" has unsupportable type", f.Path)
@@ -160,7 +172,7 @@ func (auc *AchiverUC) loadFiles(taskUid string, links []string) {
 			f := &domain.File{
 				TaskUuid: taskUid,
 				Link:     v,
-				Path:     fmt.Sprintf("%s/%d_%s_", config.DownloadPath, idx+1, taskUid),
+				Path:     fmt.Sprintf("%s%d_%s_", config.DownloadPath, idx+1, taskUid),
 			}
 			val.PushBack(f)
 		}
@@ -177,16 +189,18 @@ func (auc *AchiverUC) loadFiles(taskUid string, links []string) {
 
 		files := auc.ifl.GetByTaskUuid(taskUid)
 		archName := fmt.Sprintf("%s_%s.zip", taskUid, time.Now().Format("20060102150405"))
-		domain.PackToArchiver(fmt.Sprintf("%s/%s", config.DownloadPath, archName), files)
+		domain.PackToArchiver(fmt.Sprintf("%s%s", config.DownloadPath, archName), files)
 		task, err := auc.itr.GetByUid(taskUid)
 		if err != nil {
 			logrus.Errorf("Get task %s error: %s", taskUid, err)
 			return
 		}
 
+		task.Uuid = taskUid
 		task.ArchiveName = archName
 		task.ArchiveLink = fmt.Sprintf("%s/%s", config.LoadArchGroupName, archName)
 		task.TaskStatus = domain.FINISHED
+		task.Version++
 
 		if e := auc.itr.Update(task); e != nil {
 			logrus.Errorf("Update task %s error: %s", taskUid, e)

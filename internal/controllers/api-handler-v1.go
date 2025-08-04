@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/CALLlA-74/zip-26-07-25/domain"
@@ -19,16 +20,19 @@ type ApiHandlerV1 struct {
 }
 
 func NewArchiverHandler(ias iArchiverUsecase, g gin.IRouter) *ApiHandlerV1 {
-	g.POST("/create-task")
-	g.PATCH("/:taskUuid/add-file-links")
-	g.GET("/:taskUuid/status")
-	return &ApiHandlerV1{
+	ahv1 := &ApiHandlerV1{
 		Ias: ias,
 	}
+
+	g.POST("/create-task", ahv1.CreateTask)
+	g.PATCH("/:taskUuid/add-file-links", ahv1.AddFileLinks)
+	g.GET("/:taskUuid/status", ahv1.GetStatus)
+	return ahv1
 }
 
 func (ah ApiHandlerV1) CreateTask(context *gin.Context) {
 	task, e := ah.Ias.CreateTask()
+	fmt.Println(task, e)
 	if e != nil {
 		context.JSON(errToStatusCode(e), &domain.ErrorResponse{Message: e.Error()})
 		return
@@ -47,6 +51,7 @@ func (ah ApiHandlerV1) AddFileLinks(context *gin.Context) {
 	}
 
 	resp, e := ah.Ias.AddLinks(taskUuid, addLinksReq)
+	fmt.Println(resp, e)
 	if e != nil {
 		context.JSON(errToStatusCode(e), &domain.ErrorResponse{Message: e.Error()})
 		return
@@ -57,6 +62,7 @@ func (ah ApiHandlerV1) AddFileLinks(context *gin.Context) {
 func (ah ApiHandlerV1) GetStatus(context *gin.Context) {
 	taskUuid := context.Param("taskUuid")
 	resp, e := ah.Ias.GetStatus(taskUuid)
+	fmt.Println(resp, e)
 	if e != nil {
 		context.JSON(errToStatusCode(e), &domain.ErrorResponse{Message: e.Error()})
 		return

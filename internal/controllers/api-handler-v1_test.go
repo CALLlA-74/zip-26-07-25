@@ -47,18 +47,25 @@ func TestCreateTask(t *testing.T) {
 	mockTask := &domain.CreateTaskResponse{
 		TaskUuid: uuid.NewString(),
 	}
-	rec := testPipline(mockTask, nil)
-	assert.Equal(t, http.StatusCreated, rec.Code)
-	assert.Equal(t, true, strings.Contains(rec.Body.String(), mockTask.TaskUuid))
 
-	rec = testPipline(nil, domain.ErrBusyServer)
-	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
-	assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrBusyServer.Error()))
+	t.Run("test-success", func(t *testing.T) {
+		rec := testPipline(mockTask, nil)
+		assert.Equal(t, http.StatusCreated, rec.Code)
+		assert.Equal(t, true, strings.Contains(rec.Body.String(), mockTask.TaskUuid))
+	})
 
-	e := errors.New("Internal Server error")
-	rec = testPipline(nil, e)
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.Equal(t, true, strings.Contains(rec.Body.String(), e.Error()))
+	t.Run("test-busy", func(t *testing.T) {
+		rec := testPipline(nil, domain.ErrBusyServer)
+		assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+		assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrBusyServer.Error()))
+	})
+
+	t.Run("test-internal-error", func(t *testing.T) {
+		e := errors.New("Internal Server error")
+		rec := testPipline(nil, e)
+		assert.Equal(t, http.StatusInternalServerError, rec.Code)
+		assert.Equal(t, true, strings.Contains(rec.Body.String(), e.Error()))
+	})
 }
 
 func TestAddFileLinks(t *testing.T) {
@@ -100,16 +107,23 @@ func TestAddFileLinks(t *testing.T) {
 	copy(sl, mReq.Links[:2])
 	mResp := &domain.AddLinksResponse{AddedLinks: sl, HasReachedLimit: false}
 	tUid := uuid.NewString()
-	rec := testPipline(tUid, mReq, mResp, nil)
-	assert.Equal(t, http.StatusAccepted, rec.Code)
 
-	rec = testPipline(tUid, mReq, nil, domain.ErrAddingImpossible)
-	assert.Equal(t, http.StatusForbidden, rec.Code)
-	assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrAddingImpossible.Error()))
+	t.Run("test-success", func(t *testing.T) {
+		rec := testPipline(tUid, mReq, mResp, nil)
+		assert.Equal(t, http.StatusAccepted, rec.Code)
+	})
 
-	rec = testPipline(tUid, mReq, nil, domain.ErrTaskNotFound)
-	assert.Equal(t, http.StatusNotFound, rec.Code)
-	assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrTaskNotFound.Error()))
+	t.Run("test-adding-impossible", func(t *testing.T) {
+		rec := testPipline(tUid, mReq, nil, domain.ErrAddingImpossible)
+		assert.Equal(t, http.StatusForbidden, rec.Code)
+		assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrAddingImpossible.Error()))
+	})
+
+	t.Run("test-not-found", func(t *testing.T) {
+		rec := testPipline(tUid, mReq, nil, domain.ErrTaskNotFound)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+		assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrTaskNotFound.Error()))
+	})
 }
 
 func TestGetStatus(t *testing.T) {
@@ -142,10 +156,15 @@ func TestGetStatus(t *testing.T) {
 	mResp := new(domain.TaskStatusResponse)
 	assert.NoError(t, faker.FakeData(mResp))
 	tUid := uuid.NewString()
-	rec := testPipline(tUid, mResp, nil)
-	assert.Equal(t, http.StatusOK, rec.Code)
 
-	rec = testPipline(tUid, nil, domain.ErrTaskNotFound)
-	assert.Equal(t, http.StatusNotFound, rec.Code)
-	assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrTaskNotFound.Error()))
+	t.Run("test-success", func(t *testing.T) {
+		rec := testPipline(tUid, mResp, nil)
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("test-not-found", func(t *testing.T) {
+		rec := testPipline(tUid, nil, domain.ErrTaskNotFound)
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+		assert.Equal(t, true, strings.Contains(rec.Body.String(), domain.ErrTaskNotFound.Error()))
+	})
 }

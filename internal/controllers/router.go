@@ -6,17 +6,17 @@ import (
 )
 
 type Router struct {
-	router       *gin.Engine
+	Router       *gin.Engine
 	apiV1Handler *ApiHandlerV1
 }
 
 func NewRouter(ias iArchiverUsecase) *Router {
 	router := gin.Default()
 	r := &Router{
-		router:       router,
+		Router:       router,
 		apiV1Handler: NewArchiverHandler(ias, router.Group(config.ApiV1GroupName)),
 	}
-	NewLoadArchiverHandler(router.Group(config.LoadArchGroupName))
+	NewLoadArchiverHandler(r.Router.Group(config.LoadArchGroupName))
 
 	return r
 }
