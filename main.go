@@ -22,7 +22,7 @@ func main() {
 	if _, err := os.Stat(config.DownloadPath); os.IsNotExist(err) {
 		err := os.Mkdir(config.DownloadPath, 0700)
 		if err != nil {
-			logrus.Fatal("Mkdir [%s] error:", config.DownloadPath, err.Error())
+			logrus.Fatal("Mkdir [%s] error: %s", config.DownloadPath, err.Error())
 		}
 	}
 
